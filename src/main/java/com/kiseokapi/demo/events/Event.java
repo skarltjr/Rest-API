@@ -2,12 +2,19 @@ package com.kiseokapi.demo.events;
 
 import lombok.*;
 
+import javax.persistence.*;
 import java.time.LocalDateTime;
 
-@Getter @Setter
-@Builder @EqualsAndHashCode(of = "id")
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@Builder
+@EqualsAndHashCode(of = "id")
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
 public class Event {
+    @Id
+    @GeneratedValue
     private Integer id;
     private String name;
     private String description;
@@ -21,6 +28,7 @@ public class Event {
     private int limitOfEnrollment;
     private boolean offline;
     private boolean free;
+    @Enumerated(EnumType.STRING)
     private EventStatus eventStatus = EventStatus.DRAFT;
 
 }
