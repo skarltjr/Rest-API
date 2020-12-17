@@ -24,6 +24,11 @@ public class EventController {
     public ResponseEntity createEvent(@RequestBody Event event) {
         Event newEvent = this.eventRepository.save(event);
         URI createdUri = linkTo(EventController.class).slash(newEvent.getId()).toUri();
-        return ResponseEntity.created(createdUri).body(event); //create는 uri가 필요하고 위에서 그걸 만든 것
+        /** hateos의 Location URI만들기 그럼
+         만약에 PostMapping("/~/")이라면 URL이 컨트롤러자체에 있는게 아니니까 linkTo안에 methodOn까지 필요
+        Location:"http://localhost/api/events/10 로 로케이션 정보를 담은 URI가 만들어진다
+         requestmapping에 붙어있는걸 linkto로받고 slash + 이벤트의 Id 그대로
+         "*/
+        return ResponseEntity.created(createdUri).body(event); //created는 uri가 필요하고 위에서 그걸 만든 것
     }
 }

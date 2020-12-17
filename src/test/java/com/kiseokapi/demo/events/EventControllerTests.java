@@ -26,7 +26,7 @@ public class EventControllerTests {
     @Autowired MockMvc mockMvc;
     @Autowired
     ObjectMapper objectMapper;
-    @MockBean EventRepository eventRepository;
+    @MockBean EventRepository eventRepository; //WebMvcTest이기때문에
 
     @Test
     public void createEvent() throws Exception {
