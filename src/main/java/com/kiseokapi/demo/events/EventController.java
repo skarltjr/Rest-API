@@ -48,10 +48,12 @@ public class EventController {
         event.update();
         Event newEvent = this.eventRepository.save(event);
         URI createdUri = linkTo(EventController.class).slash(newEvent.getId()).toUri();
-        EventResource eventResource = new EventResource(event); // 이 때 생성자로 셀프링크는 생성하고
+        EventResource eventResource = new EventResource(newEvent); // 이 때 생성자로 셀프링크는 생성하고
         eventResource.add(linkTo(EventController.class).withRel("query-events"));
-        eventResource.add(linkTo(EventController.class).slash(newEvent.getId()).withRel("update-event"));
+        eventResource.add(linkTo(EventController.class).slash(newEvent.getId()).withRel("update-event"));//self와 url은 같지만 put등으로
         return ResponseEntity.created(createdUri).body(eventResource); //created는 uri가 필요하고 위에서 그걸 만든 것
     }
     //spring.jackson.deserialization.fail-on-unknown-properties=true
+
+
 }
