@@ -48,6 +48,7 @@ public class EventController {
         event.update();
         Event newEvent = this.eventRepository.save(event);
         URI createdUri = linkTo(EventController.class).slash(newEvent.getId()).toUri();
+        // 링크를 담은 리소스를 만들어서 본문 응답으로 리턴해준다.
         EventResource eventResource = new EventResource(newEvent); // 이 때 생성자로 셀프링크는 생성하고
         eventResource.add(linkTo(EventController.class).withRel("query-events"));
         eventResource.add(linkTo(EventController.class).slash(newEvent.getId()).withRel("update-event"));//self와 url은 같지만 put등으로
