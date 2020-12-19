@@ -1,16 +1,19 @@
 package com.kiseokapi.demo.events;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kiseokapi.demo.common.RestDocsConfiguration;
 import com.kiseokapi.demo.common.TestDescription;
 import lombok.RequiredArgsConstructor;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -18,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 
+import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -26,11 +30,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @RunWith(SpringRunner.class)
 @SpringBootTest
 @AutoConfigureMockMvc
+@AutoConfigureRestDocs
+@Import(RestDocsConfiguration.class) //적용
 public class EventControllerTests {
 
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @Autowired EventRepository eventRepository; //WebMvcTest이기때문에
+
 
     @Test
     public void createEvent() throws Exception {
@@ -53,7 +60,12 @@ public class EventControllerTests {
                 .content(objectMapper.writeValueAsString(event)))//객체를 json문자열로변환
                 .andDo(print())//콘솔로 어떤 요청받은건지 확인할 수 있게
                 .andExpect(status().isCreated()) //201 이 create응답
-               ;
+                .andExpect(jsonPath("_links.self").exists())
+                .andExpect(jsonPath("_links.query-events").exists())
+                .andExpect(jsonPath("_links.update-event").exists()) // 링크정보 추가 rest api스럽게
+                //.andExpect(jsonPath("_link.profile").exists())
+                .andDo(document("create-event")) //이름 주기
+        ;
     }
 
     /** spring.jackson.deserialization.fail-on-unknown-properties=true 프로퍼티에 추가해줘서
