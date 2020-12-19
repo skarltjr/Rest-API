@@ -56,5 +56,4 @@ public class EventController {
     }
     //spring.jackson.deserialization.fail-on-unknown-properties=true
 
-
 }

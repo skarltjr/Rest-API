@@ -10,6 +10,7 @@ public class EventResource extends EntityModel<Event> {
     public EventResource(Event content, Link... links) {
         super(content, links);
         add(linkTo(EventController.class).slash(content.getId()).withSelfRel());
+        //  add(new Link("http://~")) 링크를 만드는 방법에는 다양한 방법이 있지만 타입세이프한 방법을 사용
     }
     /*private Event event;
 
