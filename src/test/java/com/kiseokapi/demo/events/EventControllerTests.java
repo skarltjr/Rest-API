@@ -3,35 +3,37 @@ package com.kiseokapi.demo.events;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kiseokapi.demo.common.RestDocsConfiguration;
 import com.kiseokapi.demo.common.TestDescription;
-import lombok.RequiredArgsConstructor;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.hateoas.MediaTypes;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 
+import static org.springframework.restdocs.headers.HeaderDocumentation.*;
+import static org.springframework.restdocs.hypermedia.HypermediaDocumentation.linkWithRel;
+import static org.springframework.restdocs.hypermedia.HypermediaDocumentation.links;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
+import static org.springframework.restdocs.payload.PayloadDocumentation.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
 @AutoConfigureMockMvc
 @AutoConfigureRestDocs
 @Import(RestDocsConfiguration.class) //적용
+@ActiveProfiles("test")
 public class EventControllerTests {
 
     @Autowired MockMvc mockMvc;
@@ -60,12 +62,65 @@ public class EventControllerTests {
                 .content(objectMapper.writeValueAsString(event)))//객체를 json문자열로변환
                 .andDo(print())//콘솔로 어떤 요청받은건지 확인할 수 있게
                 .andExpect(status().isCreated()) //201 이 create응답
+                .andExpect(header().exists(HttpHeaders.LOCATION)) //created(createdUri)
+                .andExpect(jsonPath("id").exists())
+                .andExpect(jsonPath("free").value(false))
+                .andExpect(jsonPath("offline").value(true))
+                .andExpect(jsonPath("eventStatus").value(EventStatus.DRAFT.name()))
                 .andExpect(jsonPath("_links.self").exists())
                 .andExpect(jsonPath("_links.query-events").exists())
                 .andExpect(jsonPath("_links.update-event").exists()) // 링크정보 추가 rest api스럽게
-                //.andExpect(jsonPath("_link.profile").exists())
-                .andDo(document("create-event")) //이름 주기
-        ;
+                .andExpect(jsonPath("_links.profile").exists())
+                //여기부턴 문서를 만드는것
+                .andDo(document("create-event",//이름 주기
+                        links(
+                                linkWithRel("self").description("link to self"),
+                                linkWithRel("query-events").description("link to query-events"),
+                                linkWithRel("update-event").description("link to update-event"),
+                                linkWithRel("profile").description("profile")
+                                //이 링크들 문서화
+                        ),
+                        requestHeaders(//헤더정보
+                                headerWithName(HttpHeaders.ACCEPT).description("accept header"),
+                                headerWithName(HttpHeaders.CONTENT_TYPE).description("content type header")
+                        ),
+                        requestFields(
+                                fieldWithPath("name").description("name of new event"),
+                                fieldWithPath("description").description("description of new event"),
+                                fieldWithPath("beginEnrollmentDateTime").description("date time of begin enrollment of new event"),
+                                fieldWithPath("closeEnrollmentDateTime").description("date time of close enrollment of new event"),
+                                fieldWithPath("beginEventDateTime").description("date time of begin of new event"),
+                                fieldWithPath("endEventDateTime").description("date time of close of new event"),
+                                fieldWithPath("basePrice").description("baseprice of new event"),
+                                fieldWithPath("maxPrice").description("maxprice of new event"),
+                                fieldWithPath("limitOfEnrollment").description("limit of new event"),
+                                fieldWithPath("location").description("location of new event")
+                        ),
+                        responseHeaders(//헤더정보
+                                headerWithName(HttpHeaders.LOCATION).description("location header"),
+                                headerWithName(HttpHeaders.CONTENT_TYPE).description("content type header")
+                        ),
+                        responseFields(
+                                fieldWithPath("id").description("id of new event"),
+                                fieldWithPath("name").description("name of new event"),
+                                fieldWithPath("description").description("description of new event"),
+                                fieldWithPath("beginEnrollmentDateTime").description("date time of begin enrollment of new event"),
+                                fieldWithPath("closeEnrollmentDateTime").description("date time of close enrollment of new event"),
+                                fieldWithPath("beginEventDateTime").description("date time of begin of new event"),
+                                fieldWithPath("endEventDateTime").description("date time of close of new event"),
+                                fieldWithPath("basePrice").description("baseprice of new event"),
+                                fieldWithPath("maxPrice").description("maxprice of new event"),
+                                fieldWithPath("limitOfEnrollment").description("limit of new event"),
+                                fieldWithPath("location").description("location of new event"),
+                                fieldWithPath("free").description("it tells if this event is free or not"),
+                                fieldWithPath("offline").description("it tells if this event is offline or not"),
+                                fieldWithPath("eventStatus").description("event status"),
+                                fieldWithPath("_links.self.href").description("link to self"),
+                                fieldWithPath("_links.query-events.href").description("link to events"),
+                                fieldWithPath("_links.update-event.href").description("link to update event"),
+                                fieldWithPath("_links.profile.href").description("profile")
+                        )
+                ));
     }
 
     /** spring.jackson.deserialization.fail-on-unknown-properties=true 프로퍼티에 추가해줘서
@@ -117,8 +172,9 @@ public class EventControllerTests {
                 .content(objectMapper.writeValueAsString(event)))
                 .andExpect(status().isBadRequest())
                 .andDo(print())
-                .andExpect(jsonPath("$[0].objectName").exists())
-                .andExpect(jsonPath("$[0].defaultMessage").exists())
-                .andExpect(jsonPath("$[0].code").exists());
+                .andExpect(jsonPath("content[0].objectName").exists())
+                .andExpect(jsonPath("content[0].defaultMessage").exists())
+                .andExpect(jsonPath("content[0].code").exists())
+                .andExpect(jsonPath("_links.index").exists());
     }
 }

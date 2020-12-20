@@ -1,7 +1,10 @@
 package com.kiseokapi.demo.events;
 
+import com.kiseokapi.demo.common.ErrorResource;
+import com.kiseokapi.demo.index.IndexController;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.hateoas.Link;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -42,7 +45,8 @@ public class EventController {
     public ResponseEntity createEvent(@RequestBody @Valid EventDto eventDto, Errors errors) {
 
         if (errors.hasErrors()) {
-            return ResponseEntity.badRequest().body(errors);
+            return ResponseEntity.badRequest().body(new ErrorResource(errors));
+            /** 에러가 생겼을 때 루트로 돌아가도록 해줄려면 링크를 담아야 한다 그래서 errorResource추가해주기*/
         }
         Event event = modelMapper.map(eventDto, Event.class);
         event.update();
@@ -51,6 +55,7 @@ public class EventController {
         // 링크를 담은 리소스를 만들어서 본문 응답으로 리턴해준다.
         EventResource eventResource = new EventResource(newEvent); // 이 때 생성자로 셀프링크는 생성하고
         eventResource.add(linkTo(EventController.class).withRel("query-events"));
+        eventResource.add(new Link("/docs/index.html#resources-events-create").withRel("profile"));
         eventResource.add(linkTo(EventController.class).slash(newEvent.getId()).withRel("update-event"));//self와 url은 같지만 put등으로
         return ResponseEntity.created(createdUri).body(eventResource); //created는 uri가 필요하고 위에서 그걸 만든 것
     }
