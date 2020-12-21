@@ -4,19 +4,22 @@ import com.kiseokapi.demo.common.ErrorResource;
 import com.kiseokapi.demo.index.IndexController;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PagedResourcesAssembler;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.Link;
 import org.springframework.hateoas.MediaTypes;
+import org.springframework.hateoas.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.Errors;
 import org.springframework.web.bind.WebDataBinder;
-import org.springframework.web.bind.annotation.InitBinder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.net.URI;
+import java.util.Optional;
 
 import static org.springframework.hateoas.server.mvc.ControllerLinkBuilder.linkTo;
 
@@ -61,4 +64,48 @@ public class EventController {
     }
     //spring.jackson.deserialization.fail-on-unknown-properties=true
 
+    @GetMapping         /**  페이지도 결국 링크를 달아주기위해 리소스로 처리해야하는데 그 때 유용한게 PagedResourcesAssembler*/
+    public ResponseEntity queryEvents(Pageable pageable, PagedResourcesAssembler<Event> assembler) {
+        /**  테스트코드에서 페이징 파라미터를 어떻게 받는지 볷브*/
+        Page<Event> page = eventRepository.findAll(pageable);
+        PagedModel<EntityModel<Event>> entityModels = assembler.toModel(page,e->new EventResource(e));
+        /** 매우 중요 !! 페이지에 ! 대한 링크 다음페이지 등등은 존재하지만 각각의 이벤트마다는 링크가 없다
+         * 그래서 각각의 이벤트들을 이벤트 리로스로 변경해주기위해 e->new EventResource(e) 추가해준다 파라미터로*/
+        // resource로 변경을 해주면
+        //페이지와 관련된 기본적인 링크를 알아서 제공해준다
+        //self prev last page.. 등을 기본으로 제공
+        entityModels.add(new Link("/docs/index.html#resources-events-list").withRel("profile"));
+        return ResponseEntity.ok(entityModels);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity getEvent(@PathVariable Integer id) {
+        Optional<Event> byId = eventRepository.findById(id);
+        if (byId.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Event event = byId.orElseThrow();
+        EventResource eventResource = new EventResource(event);
+        eventResource.add(new Link("/docs/index.html#resources-events-get").withRel("profile"));
+        return ResponseEntity.ok(eventResource);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity updateEvent(@PathVariable Integer id, @RequestBody @Valid EventDto eventDto,
+                                      Errors errors) {
+        Event event = eventRepository.findById(id).orElseThrow();
+        if (event == null) {
+            /**  1. 비어있는 경우*/
+            return ResponseEntity.notFound().build();
+        }
+        if (errors.hasErrors()) {
+            return ResponseEntity.badRequest().body(new ErrorResource(errors));
+        }
+        modelMapper.map(eventDto, event);
+        Event newEvent = eventRepository.save(event);
+        // 원래는 service단에서 트랜잭션으로 데이터변경 후
+        EventResource eventResource = new EventResource(newEvent);
+        eventResource.add(new Link("/docs/index.html#resources-events-update").withRel("profile"));
+        return ResponseEntity.ok(eventResource);
+    }
 }
