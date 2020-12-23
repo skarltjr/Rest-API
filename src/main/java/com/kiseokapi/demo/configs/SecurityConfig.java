@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -45,5 +46,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         web.ignoring().mvcMatchers("/docs/index.html");
         web.ignoring().requestMatchers(PathRequest.toStaticResources().atCommonLocations());
         //static resource는 시큐리티 적용 x
+    }
+
+    //시큐리티 안으로 들어왔을 때
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.authorizeRequests()
+                .mvcMatchers("/docs/index.html").anonymous() // 익명도 허용해라
+                .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).anonymous(); //여기도 허용
     }
 }
