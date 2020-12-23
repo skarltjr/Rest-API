@@ -1,9 +1,12 @@
 package com.kiseokapi.demo.events;
 
+import com.kiseokapi.demo.accounts.Account;
 import lombok.*;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -28,8 +31,12 @@ public class Event {
     private int limitOfEnrollment;
     private boolean offline;
     private boolean free;
+
     @Enumerated(EnumType.STRING)
     private EventStatus eventStatus = EventStatus.DRAFT;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Account manager;
 
     public void update() {
         if (this.basePrice == 0 && this.maxPrice == 0) {
