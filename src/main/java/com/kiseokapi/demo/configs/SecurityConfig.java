@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -51,8 +52,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     //시큐리티 안으로 들어왔을 때
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.authorizeRequests()
-                .mvcMatchers("/docs/index.html").anonymous() // 익명도 허용해라
-                .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).anonymous(); //여기도 허용
+        http
+                .anonymous()
+                .and()
+                .formLogin()
+                //.loginPage() 로그인페이지를 주거나
+                .and()
+                .authorizeRequests()
+                .mvcMatchers(HttpMethod.GET, "/api/**").authenticated()
+                .anyRequest().authenticated();
     }
+
 }
