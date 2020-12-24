@@ -53,5 +53,6 @@ public class AuthServerConfig extends AuthorizationServerConfigurerAdapter {
     public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
         endpoints.authenticationManager(authenticationManager)
                 .tokenStore(tokenStore);
+        //엔드 포인트는 클라이언트 응용 프로그램에서 서비스에 액세스 할 수있는 URL
     }
 }
