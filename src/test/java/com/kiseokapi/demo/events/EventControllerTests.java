@@ -1,8 +1,14 @@
 package com.kiseokapi.demo.events;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kiseokapi.demo.accounts.Account;
+import com.kiseokapi.demo.accounts.AccountRepository;
+import com.kiseokapi.demo.accounts.AccountRole;
+import com.kiseokapi.demo.accounts.AccountService;
 import com.kiseokapi.demo.common.RestDocsConfiguration;
 import com.kiseokapi.demo.common.TestDescription;
+import com.kiseokapi.demo.configs.AppProperties;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.modelmapper.ModelMapper;
@@ -15,11 +21,15 @@ import org.springframework.context.annotation.Import;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.oauth2.common.util.Jackson2JsonParser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.stream.IntStream;
 
 import static org.springframework.restdocs.headers.HeaderDocumentation.*;
@@ -27,6 +37,7 @@ import static org.springframework.restdocs.hypermedia.HypermediaDocumentation.li
 import static org.springframework.restdocs.hypermedia.HypermediaDocumentation.links;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.payload.PayloadDocumentation.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -47,6 +58,17 @@ public class EventControllerTests {
     EventRepository eventRepository; //WebMvcTest이기때문에
     @Autowired
     ModelMapper modelMapper;
+    @Autowired
+    AccountService accountService;
+    @Autowired
+    AccountRepository accountRepository;
+    @Autowired
+    AppProperties appProperties;
+    @Before
+    public void setUp() {
+        eventRepository.deleteAll();
+        accountRepository.deleteAll();
+    }
 
 
     @Test
@@ -65,6 +87,7 @@ public class EventControllerTests {
                 .build();
 
         mockMvc.perform(post("/api/events/")
+                .header(HttpHeaders.AUTHORIZATION,"Bearer "+getAccessToken())
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaTypes.HAL_JSON)
                 .content(objectMapper.writeValueAsString(event)))//객체를 json문자열로변환
@@ -131,6 +154,24 @@ public class EventControllerTests {
                 ));
     }
 
+    private String getAccessToken() throws Exception{
+        Account.builder()
+                .email(appProperties.getUserUsername())
+                .password(appProperties.getUserPassword())
+                .roles(Set.of(AccountRole.ADMIN,AccountRole.USER))
+                .build();
+
+        ResultActions perform = mockMvc.perform(post("/oauth/token")
+                .with(httpBasic(appProperties.getClientId(),appProperties.getClientSecret())) // HTTP Basic 인증 헤더 (클라이언트 아이디 + 클라이언트 시크릿)
+                //grant_type: password//username//password 파라미터로
+                .param("username", appProperties.getUserUsername())
+                .param("password", appProperties.getUserPassword())
+                .param("grant_type", "password"));// 패스워드 인증타입. 즉 다른 sns를 통해서가 아니라 직접 비밀번호입력으로
+        String contentAsString = perform.andReturn().getResponse().getContentAsString();
+        Jackson2JsonParser parser = new Jackson2JsonParser();
+        return parser.parseMap(contentAsString).get("access_token").toString();
+    }
+
     /**
      * spring.jackson.deserialization.fail-on-unknown-properties=true 프로퍼티에 추가해줘서
      * 아래 배드리퀘스트상황처럼 알맞지 않은 정보가 들어가면 배드리퀘스트
@@ -152,6 +193,7 @@ public class EventControllerTests {
                 .build();
 
         mockMvc.perform(post("/api/events/")
+                .header(HttpHeaders.AUTHORIZATION,"Bearer "+getAccessToken())
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaTypes.HAL_JSON)
                 .content(objectMapper.writeValueAsString(event)))//객체를 json문자열로변환
@@ -180,6 +222,7 @@ public class EventControllerTests {
                 .build();
         //값들이 비어있을 때 배드리퀘스트 던지도록 설정추가 Notnull..등
         mockMvc.perform(post("/api/events")
+                .header(HttpHeaders.AUTHORIZATION,"Bearer "+getAccessToken())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(event)))
                 .andExpect(status().isBadRequest())
@@ -268,6 +311,7 @@ public class EventControllerTests {
         EventDto eventDto = modelMapper.map(event, EventDto.class);
         eventDto.setName("updated Event");
         mockMvc.perform(put("/api/events/{id}", event.getId())
+                .header(HttpHeaders.AUTHORIZATION,"Bearer "+getAccessToken())
                 .content(objectMapper.writeValueAsString(eventDto))
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaTypes.HAL_JSON))
@@ -284,6 +328,7 @@ public class EventControllerTests {
         Event event = generateEvent(200);
         EventDto eventDto = new EventDto();
         mockMvc.perform(put("/api/events/{id}", event.getId())
+                .header(HttpHeaders.AUTHORIZATION,"Bearer "+getAccessToken())
                 .content(objectMapper.writeValueAsString(eventDto)))
                 .andExpect(status().isBadRequest())
                 .andDo(print());
@@ -298,6 +343,7 @@ public class EventControllerTests {
         eventDto.setBasePrice(50000); // basePrice가 더 높은 잘못된 경우
         eventDto.setMaxPrice(200);
         mockMvc.perform(put("/api/events/{id}", event.getId())
+                .header(HttpHeaders.AUTHORIZATION,"Bearer "+getAccessToken())
                 .content(objectMapper.writeValueAsString(eventDto)))
                 .andExpect(status().isBadRequest())
                 .andDo(print());
@@ -309,6 +355,7 @@ public class EventControllerTests {
         Event event = generateEvent(200);
         EventDto eventDto = modelMapper.map(event, EventDto.class);
         mockMvc.perform(put("/api/events/123456")
+                .header(HttpHeaders.AUTHORIZATION,"Bearer "+getAccessToken())
                 .content(objectMapper.writeValueAsString(eventDto)))
                 .andExpect(status().isBadRequest())
                 .andDo(print());

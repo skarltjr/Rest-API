@@ -50,7 +50,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     }
 
     //시큐리티 안으로 들어왔을 때
-    @Override
+    //authserverconfig에서 설정으로 대체
+ /*   @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
                 .anonymous()
@@ -62,5 +63,5 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .mvcMatchers(HttpMethod.GET, "/api/**").authenticated()
                 .anyRequest().authenticated();
     }
-
+*/
 }
