@@ -1,6 +1,5 @@
 package com.kiseokapi.demo.configs;
 
-import com.kiseokapi.demo.accounts.AccountService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,7 +14,7 @@ import org.springframework.security.oauth2.provider.token.TokenStore;
 import javax.sql.DataSource;
 
 @Configuration
-@EnableAuthorizationServer
+@EnableAuthorizationServer //인증서버설정
 @RequiredArgsConstructor
 public class AuthServerConfig extends AuthorizationServerConfigurerAdapter {
     // 인증 토큰을 발급받을 수 있도록 하는것이 목표
