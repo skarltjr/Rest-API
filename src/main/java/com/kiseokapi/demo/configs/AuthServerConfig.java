@@ -47,6 +47,10 @@ public class AuthServerConfig extends AuthorizationServerConfigurerAdapter {
                 .secret(passwordEncoder.encode(appProperties.getClientSecret())) // app(myApp)의 비밀번호
                 .accessTokenValiditySeconds(10 * 60) // 10분
                 .refreshTokenValiditySeconds(6 * 10 * 60);
+
+        /** basic auth 이란
+         api 서버에서 데이터을 요구할때 http Authorization 헤더에 user id 와 ,
+         password 을 base64 로 인코딩한 문자열을 추가하여 인증하는 형식*/
     }
 
     @Override
