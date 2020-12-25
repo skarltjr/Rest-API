@@ -37,7 +37,7 @@ public class Event {
     @Enumerated(EnumType.STRING)
     private EventStatus eventStatus = EventStatus.DRAFT;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY) // lazy로딩으로 No serializer found for class가 생기기도한다
     @JsonSerialize(using = AccountSerializer.class)
     private Account manager;
 
