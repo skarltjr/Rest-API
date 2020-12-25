@@ -1,7 +1,8 @@
 package com.kiseokapi.demo.events;
 
+import com.kiseokapi.demo.accounts.Account;
+import com.kiseokapi.demo.accounts.CurrentUser;
 import com.kiseokapi.demo.common.ErrorResource;
-import com.kiseokapi.demo.index.IndexController;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
@@ -11,6 +12,7 @@ import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.Link;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.hateoas.PagedModel;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.Errors;
@@ -45,7 +47,8 @@ public class EventController {
      requestmapping에 붙어있는걸 linkto로받고 slash + 이벤트의 Id 그대로
      "*/
     @PostMapping
-    public ResponseEntity createEvent(@RequestBody @Valid EventDto eventDto, Errors errors) {
+    public ResponseEntity createEvent(@RequestBody @Valid EventDto eventDto, Errors errors,
+                                      @CurrentUser Account account) {
 
         if (errors.hasErrors()) {
             return ResponseEntity.badRequest().body(new ErrorResource(errors));
@@ -53,6 +56,7 @@ public class EventController {
         }
         Event event = modelMapper.map(eventDto, Event.class);
         event.update();
+        event.setManager(account);
         Event newEvent = this.eventRepository.save(event);
         URI createdUri = linkTo(EventController.class).slash(newEvent.getId()).toUri();
         // 링크를 담은 리소스를 만들어서 본문 응답으로 리턴해준다.
@@ -65,9 +69,17 @@ public class EventController {
     //spring.jackson.deserialization.fail-on-unknown-properties=true
 
     @GetMapping         /**  페이지도 결국 링크를 달아주기위해 리소스로 처리해야하는데 그 때 유용한게 PagedResourcesAssembler*/
-    public ResponseEntity queryEvents(Pageable pageable, PagedResourcesAssembler<Event> assembler) {
-        /**  테스트코드에서 페이징 파라미터를 어떻게 받는지 볷브*/
-        Page<Event> page = eventRepository.findAll(pageable);
+    public ResponseEntity queryEvents(Pageable pageable, PagedResourcesAssembler<Event> assembler,
+                                     /* @AuthenticationPrincipal User user -> */@CurrentUser Account account) {
+        /** Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserAccount principal = (UserAccount) authentication.getPrincipal();
+        principal.getAccount()
+         원래는 이렇게 가져온 account는 인증된객체 -> null인지만 확인하면 존재하는 인증된 객체인것을 확인가능 그러나
+         너무 길다. 그래서 @AuthenticationPrincipal까지 한 번에 수행할 수 있도록 메타어노테이션을 만들어서 사용
+         CurrentUser + (expression = "#this == 'anonymousUser' ? null : account")
+         */
+
+        Page<Event> page = eventRepository.findAll(pageable); /**  테스트코드에서 페이징 파라미터를 어떻게 받는지 볷브*/
         PagedModel<EntityModel<Event>> entityModels = assembler.toModel(page,e->new EventResource(e));
         /** 매우 중요 !! 페이지에 ! 대한 링크 다음페이지 등등은 존재하지만 각각의 이벤트마다는 링크가 없다
          * 그래서 각각의 이벤트들을 이벤트 리로스로 변경해주기위해 e->new EventResource(e) 추가해준다 파라미터로*/
@@ -75,11 +87,14 @@ public class EventController {
         //페이지와 관련된 기본적인 링크를 알아서 제공해준다
         //self prev last page.. 등을 기본으로 제공
         entityModels.add(new Link("/docs/index.html#resources-events-list").withRel("profile"));
+        if (account != null) {
+            entityModels.add(linkTo(EventController.class).withRel("create-event"));
+        }
         return ResponseEntity.ok(entityModels);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity getEvent(@PathVariable Integer id) {
+    public ResponseEntity getEvent(@PathVariable Integer id,@CurrentUser Account account) {
         Optional<Event> byId = eventRepository.findById(id);
         if (byId.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -87,12 +102,15 @@ public class EventController {
         Event event = byId.orElseThrow();
         EventResource eventResource = new EventResource(event);
         eventResource.add(new Link("/docs/index.html#resources-events-get").withRel("profile"));
+        if (event.getManager().equals(account)) {
+            eventResource.add(linkTo(EventController.class).slash(event.getId()).withRel("update-event"));
+        }
         return ResponseEntity.ok(eventResource);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity updateEvent(@PathVariable Integer id, @RequestBody @Valid EventDto eventDto,
-                                      Errors errors) {
+                                      Errors errors,@CurrentUser Account account) {
         Event event = eventRepository.findById(id).orElseThrow();
         if (event == null) {
             /**  1. 비어있는 경우*/
@@ -104,6 +122,9 @@ public class EventController {
         modelMapper.map(eventDto, event);
         Event newEvent = eventRepository.save(event);
         // 원래는 service단에서 트랜잭션으로 데이터변경 후
+        if (!newEvent.getManager().equals(account)) {
+            return new ResponseEntity(HttpStatus.UNAUTHORIZED);
+        }
         EventResource eventResource = new EventResource(newEvent);
         eventResource.add(new Link("/docs/index.html#resources-events-update").withRel("profile"));
         return ResponseEntity.ok(eventResource);

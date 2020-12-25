@@ -1,6 +1,8 @@
 package com.kiseokapi.demo.events;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.kiseokapi.demo.accounts.Account;
+import com.kiseokapi.demo.accounts.AccountSerializer;
 import lombok.*;
 
 import javax.persistence.*;
@@ -36,6 +38,7 @@ public class Event {
     private EventStatus eventStatus = EventStatus.DRAFT;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JsonSerialize(using = AccountSerializer.class)
     private Account manager;
 
     public void update() {
