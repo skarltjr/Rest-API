@@ -155,11 +155,12 @@ public class EventControllerTests {
     }
 
     private String getAccessToken() throws Exception{
-        Account.builder()
+        Account build = Account.builder()
                 .email(appProperties.getUserUsername())
                 .password(appProperties.getUserPassword())
-                .roles(Set.of(AccountRole.ADMIN,AccountRole.USER))
+                .roles(Set.of(AccountRole.ADMIN, AccountRole.USER))
                 .build();
+        accountRepository.save(build);
 
         ResultActions perform = mockMvc.perform(post("/oauth/token")
                 .with(httpBasic(appProperties.getClientId(),appProperties.getClientSecret())) // HTTP Basic 인증 헤더 (클라이언트 아이디 + 클라이언트 시크릿)
